@@ -47,6 +47,24 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Railway-specific colors
+        status: {
+          success: "hsl(var(--status-success))",
+          warning: "hsl(var(--status-warning))",
+          danger: "hsl(var(--status-danger))",
+          info: "hsl(var(--status-info))",
+        },
+        railway: {
+          line: "hsl(var(--railway-line))",
+          station: "hsl(var(--station-primary))",
+          express: "hsl(var(--train-express))",
+          freight: "hsl(var(--train-freight))",
+        },
+        control: {
+          accept: "hsl(var(--button-accept))",
+          override: "hsl(var(--button-override))",
+          hold: "hsl(var(--button-hold))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
