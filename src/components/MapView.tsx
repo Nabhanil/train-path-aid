@@ -46,8 +46,8 @@ export const MapView = () => {
     script.onload = () => {
       if (mapRef.current && window.google) {
         const map = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 40.75, lng: -74.0 }, // NYC area for railway demo
-          zoom: 12,
+          center: { lat: 23.5, lng: 77.5 }, // Central India for railway demo
+          zoom: 6,
           mapTypeId: 'terrain',
           styles: [
             {
