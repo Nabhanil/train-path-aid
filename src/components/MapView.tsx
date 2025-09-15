@@ -6,6 +6,13 @@ import { MapPin, Layers, ZoomIn, ZoomOut, Navigation } from 'lucide-react';
 import { mockTrains, mockRailwaySection } from '@/lib/mockData';
 import { Train, Station } from '@/types/railway';
 
+// Declare Google Maps types
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 export const MapView = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [apiKey, setApiKey] = useState<string>('');
@@ -32,9 +39,118 @@ export const MapView = () => {
   };
 
   const initializeMap = (key: string) => {
-    // In a real implementation, you would load the Google Maps JavaScript API
-    // For now, we'll simulate the map with a styled div
-    console.log('Initializing map with API key:', key.substring(0, 10) + '...');
+    // Load Google Maps JavaScript API
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=geometry`;
+    script.async = true;
+    script.onload = () => {
+      if (mapRef.current && window.google) {
+        const map = new window.google.maps.Map(mapRef.current, {
+          center: { lat: 40.75, lng: -74.0 }, // NYC area for railway demo
+          zoom: 12,
+          mapTypeId: 'terrain',
+          styles: [
+            {
+              "featureType": "all",
+              "elementType": "geometry.fill",
+              "stylers": [{"color": "#1a1a1a"}]
+            },
+            {
+              "featureType": "all",
+              "elementType": "labels.text.fill",
+              "stylers": [{"color": "#ffffff"}]
+            },
+            {
+              "featureType": "all",
+              "elementType": "labels.text.stroke",
+              "stylers": [{"color": "#000000"}, {"lightness": 13}]
+            },
+            {
+              "featureType": "road",
+              "elementType": "geometry",
+              "stylers": [{"color": "#333333"}]
+            },
+            {
+              "featureType": "water",
+              "elementType": "geometry",
+              "stylers": [{"color": "#2c5282"}]
+            }
+          ]
+        });
+
+        // Add railway lines as polylines
+        mockRailwaySection.railwayLines.forEach(line => {
+          const polyline = new window.google.maps.Polyline({
+            path: line.path,
+            geodesic: true,
+            strokeColor: '#facc15',
+            strokeOpacity: 1.0,
+            strokeWeight: 4,
+          });
+          polyline.setMap(map);
+        });
+
+        // Add stations as markers
+        mockRailwaySection.stations.forEach(station => {
+          const marker = new window.google.maps.Marker({
+            position: station.position,
+            map: map,
+            title: station.name,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              fillColor: '#10b981',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2,
+              scale: 8
+            }
+          });
+
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: `<div class="p-2"><h3 class="font-semibold">${station.name}</h3><p class="text-sm">${station.type}</p></div>`
+          });
+
+          marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+          });
+        });
+
+        // Add trains as animated markers
+        trains.forEach(train => {
+          const marker = new window.google.maps.Marker({
+            position: train.position,
+            map: map,
+            title: `Train ${train.id}`,
+            icon: {
+              path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+              fillColor: train.type === 'express' ? '#ef4444' : train.type === 'freight' ? '#f97316' : '#3b82f6',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 1,
+              scale: 6,
+              rotation: 45
+            }
+          });
+
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: `
+              <div class="p-3">
+                <h3 class="font-semibold">Train ${train.id}</h3>
+                <p class="text-sm">Type: ${train.type}</p>
+                <p class="text-sm">Speed: ${train.speed} km/h</p>
+                <p class="text-sm">Destination: ${train.destination}</p>
+                <p class="text-sm">ETA: ${train.eta}</p>
+              </div>
+            `
+          });
+
+          marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+          });
+        });
+      }
+    };
+    document.head.appendChild(script);
   };
 
   const getTrainMarkerColor = (type: Train['type']) => {
@@ -110,80 +226,11 @@ export const MapView = () => {
         </div>
       </div>
 
-      {/* Simulated Map Container */}
+      {/* Real Google Map Container */}
       <div 
         ref={mapRef} 
-        className="w-full h-full bg-slate-800 relative overflow-hidden"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 25% 25%, #1e40af 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, #059669 0%, transparent 50%),
-            linear-gradient(45deg, #0f172a 0%, #1e293b 100%)
-          `
-        }}
-      >
-        {/* Railway Lines */}
-        <svg className="absolute inset-0 w-full h-full">
-          <defs>
-            <pattern id="railway-pattern" patternUnits="userSpaceOnUse" width="20" height="4">
-              <rect width="20" height="4" fill="none"/>
-              <rect x="0" y="1" width="15" height="2" fill="hsl(var(--railway-line))"/>
-            </pattern>
-          </defs>
-          {mockRailwaySection.railwayLines.map((line, index) => (
-            <polyline
-              key={line.id}
-              points={line.path.map(p => `${(p.lng + 74) * 1000},${(40.8 - p.lat) * 1000}`).join(' ')}
-              stroke="url(#railway-pattern)"
-              strokeWidth="4"
-              fill="none"
-            />
-          ))}
-        </svg>
-
-        {/* Stations */}
-        {mockRailwaySection.stations.map((station) => (
-          <div
-            key={station.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2"
-            style={{
-              left: `${(station.position.lng + 74) * 1000}px`,
-              top: `${(40.8 - station.position.lat) * 1000}px`,
-            }}
-          >
-            <div className="bg-railway-station p-2 rounded-full shadow-lg border-2 border-white">
-              <span className="text-lg">{getStationIcon(station.type)}</span>
-            </div>
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1">
-              <div className="bg-card px-2 py-1 rounded text-xs font-medium whitespace-nowrap">
-                {station.name}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Trains */}
-        {trains.map((train) => (
-          <div
-            key={train.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-            style={{
-              left: `${(train.position.lng + 74) * 1000}px`,
-              top: `${(40.8 - train.position.lat) * 1000}px`,
-            }}
-            onClick={() => setSelectedTrain(train)}
-          >
-            <div className={`${getTrainMarkerColor(train.type)} p-2 rounded-full shadow-lg border-2 border-white animate-pulse`}>
-              <span className="text-white text-sm font-bold">🚂</span>
-            </div>
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1">
-              <div className="bg-card px-2 py-1 rounded text-xs font-medium">
-                {train.id}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+        className="w-full h-full"
+      />
 
       {/* Train Details Popup */}
       {selectedTrain && (
